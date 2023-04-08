@@ -28,7 +28,7 @@ dependencies:
 - stm
 - containers
 - adjunction-combinators
-
+- kan-extensions
 
 ghc-options:
 - -Wall

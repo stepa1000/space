@@ -25,6 +25,9 @@ source-repository head
 
 library
   exposed-modules:
+      Data.Space.Base
+      Data.Space.TMVar
+      Data.Universe
       Lib
   other-modules:
       Paths_space
@@ -32,7 +35,14 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      adjunction-combinators
+    , adjunctions
+    , base >=4.7 && <5
+    , comonad
+    , containers
+    , kan-extensions
+    , mtl
+    , stm
   default-language: Haskell2010
 
 executable space-exe
@@ -43,8 +53,15 @@ executable space-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      adjunction-combinators
+    , adjunctions
+    , base >=4.7 && <5
+    , comonad
+    , containers
+    , kan-extensions
+    , mtl
     , space
+    , stm
   default-language: Haskell2010
 
 test-suite space-test
@@ -56,6 +73,13 @@ test-suite space-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      adjunction-combinators
+    , adjunctions
+    , base >=4.7 && <5
+    , comonad
+    , containers
+    , kan-extensions
+    , mtl
     , space
+    , stm
   default-language: Haskell2010

@@ -13,6 +13,9 @@ import Data.Universe
 
 type SpaceGlobal f g = W.AdjointT f g Universe2
 
+liftUniverse2 :: (Functor f, Functor g) => Universe2 a -> f () -> g () -> SpaceGlobal f g a
+liftUniverse2 u f g = W.AdjointT $ fmap (const $ fmap (\a -> fmap (const a) g) u) f
+
 makeSpaceG :: (Monad m, Functor f) => f () -> g b -> g b -> a -> (a -> m (Maybe (g b, a))) -> m (SpaceGlobal f g b)
 makeSpaceG fa fgNil gCentr a mg = do
   ll <- fixF a
@@ -38,13 +41,15 @@ makeSpaceG fa fgNil gCentr a mg = do
 {-
 makeSpaceDS :: (Functor f) => f () -> g b -> a -> (a -> Maybe (g b, a)) -> SpaceGlobal f g b
 makeSpaceDS fu a gd gmd =
-  fst <$> Universe2 $
-    makeUniverse
-      (const $ makeUniverse f f (gmd a))
-      (const $ makeUniverse f f (gmd a))
-      (makeUniverse f f (gmd a))
+  W.AdjointT $
+    fmap fst $
+      Universe2 $
+        makeUniverse
+          (fmap a )
+          (makeUniverse f f (gmd a))
+          (makeUniverse f f (gmd a))
   where
-    f (Just gmba) = gmb (snd gmba)
+    f (Just gmba) = gmd (snd gmba)
     f _ = Nothing
 -}
 upSG :: (Adjunction f g) => SpaceGlobal f g a -> SpaceGlobal f g a

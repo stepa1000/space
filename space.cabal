@@ -26,7 +26,8 @@ source-repository head
 library
   exposed-modules:
       Data.Space.Base
-      Data.Space.TMVar
+      Data.Space.Free
+      Data.Space.TVar
       Data.Universe
       Lib
   other-modules:
@@ -40,6 +41,7 @@ library
     , base >=4.7 && <5
     , comonad
     , containers
+    , free
     , kan-extensions
     , mtl
     , stm
@@ -58,6 +60,7 @@ executable space-exe
     , base >=4.7 && <5
     , comonad
     , containers
+    , free
     , kan-extensions
     , mtl
     , space
@@ -78,6 +81,7 @@ test-suite space-test
     , base >=4.7 && <5
     , comonad
     , containers
+    , free
     , kan-extensions
     , mtl
     , space

@@ -1,6 +1,7 @@
 module Data.Universe where
 
 import Control.Comonad
+import Control.Monad.Zip
 
 data Universe a = Universe [a] a [a]
 
@@ -19,6 +20,28 @@ goto i u
   | True = u
 
 makeUniverse fl fr x = Universe (tail $ iterate fl x) x (tail $ iterate fr x)
+
+universeNothing :: Universe (Maybe a)
+universeNothing = makeUniverse id id Nothing
+
+makeUniverseMaybe :: (a -> Maybe a) -> a -> Universe (Maybe a)
+makeUniverseMaybe f a = makeUniverse (>>= f) (>>= f) (Just a)
+
+makeUniverseM :: Monad m => (a -> m (Maybe a)) -> a -> m (Universe (Maybe a))
+makeUniverseM f a = do
+  midle <- f a
+  ll <- l midle
+  lr <- l midle
+  return $ Universe ll midle lr
+  where
+    l (Just a2) = do
+      ma <- (f a2)
+      la <- l ma
+      return $ ma : la
+    l Nothing = return $ repeat Nothing
+
+zipU :: Universe a -> Universe b -> Universe (a, b)
+zipU (Universe la a ra) (Universe lb b rb) = Universe (mzip la lb) (a, b) (mzip ra rb)
 
 instance Functor Universe where
   fmap f (Universe as x bs) = Universe (fmap f as) (f x) (fmap f bs)
@@ -55,6 +78,21 @@ left2 (Universe2 u) = Universe2 $ left u
 
 right2 :: Universe2 a -> Universe2 a
 right2 (Universe2 u) = Universe2 $ right u
+
+makeUniverse2M :: Monad m => (a -> m (Maybe a)) -> a -> m (Universe2 (Maybe a))
+makeUniverse2M f a = do
+  midle <- makeUniverseM f a
+  umum <- makeUniverseM (g . extract) midle
+  return $ Universe2 $ fmap t umum
+  where
+    t (Just a) = a
+    t Nothing = universeNothing
+    g (Just _) = Just <$> makeUniverseM f a
+    g a = return (Nothing)
+
+zipU2 :: Universe2 a -> Universe2 b -> Universe2 (a, b)
+zipU2 (Universe2 (Universe lu1 u1 ru1)) (Universe2 (Universe lu2 u2 ru2)) =
+  Universe2 $ Universe (mzipWith zipU lu1 lu2) (zipU u1 u2) (mzipWith zipU ru1 ru2)
 
 goto2 :: Int -> Int -> Universe2 a -> Universe2 a
 goto2 x y (Universe2 u) = Universe2 $ goto x $ fmap (goto y) u

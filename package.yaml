@@ -29,6 +29,7 @@ dependencies:
 - containers
 - adjunction-combinators
 - kan-extensions
+- free
 
 ghc-options:
 - -Wall

@@ -37,9 +37,13 @@ packages:
 #
 extra-deps:
 - git: https://github.com/stepa1000/adjunction-combinators.git 
-  commit: f75ba648872a77839d8d14bde4f786d682b67f26
+  commit: 311ce7666b45448c4bfed2a6cd01cfbbb28b99af
 - git: https://github.com/stepa1000/coandkleisli.git
   commit: d4f76d1f7f25d4ffff974a7c13483b79f87aa409
+- git: https://github.com/stepa1000/free-profunctor.git
+  commit: d47c29187e5f0c616b992f296e83d0f3253832d3
+- bpann-0.1.1@sha256:f3245a48d2a67f7e6551559ecc216f841db4887311392e60f53c07a0eeab3365,738
+- functor-combinators-0.4.1.2@sha256:016ea62aaa27ad749d496d07e90ac8628c5d4fb910f650da539acd6aa548a996,5694
   
 # - acme-missiles-0.3
 # - git: https://github.com/commercialhaskell/stack.git

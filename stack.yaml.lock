@@ -5,15 +5,15 @@
 
 packages:
 - completed:
-    commit: f75ba648872a77839d8d14bde4f786d682b67f26
+    commit: 311ce7666b45448c4bfed2a6cd01cfbbb28b99af
     git: https://github.com/stepa1000/adjunction-combinators.git
     name: adjunction-combinators
     pantry-tree:
-      sha256: 3645877efec3fad9ebc3d2d87c4f2aa1393d89c682c393ff41c3e76a5f20ca72
-      size: 987
+      sha256: 1ea9f8fb3c59d527b79e9caff1f2f0aadec900c97e66178096a670c87839a708
+      size: 3679
     version: 0.1.0.0
   original:
-    commit: f75ba648872a77839d8d14bde4f786d682b67f26
+    commit: 311ce7666b45448c4bfed2a6cd01cfbbb28b99af
     git: https://github.com/stepa1000/adjunction-combinators.git
 - completed:
     commit: d4f76d1f7f25d4ffff974a7c13483b79f87aa409
@@ -26,6 +26,31 @@ packages:
   original:
     commit: d4f76d1f7f25d4ffff974a7c13483b79f87aa409
     git: https://github.com/stepa1000/coandkleisli.git
+- completed:
+    commit: d47c29187e5f0c616b992f296e83d0f3253832d3
+    git: https://github.com/stepa1000/free-profunctor.git
+    name: free-profunctor
+    pantry-tree:
+      sha256: 4518bd2b8f419159b2584360ddbb117da71451cef7c20ea141372c7bd14b36fe
+      size: 730
+    version: 0.1.0.0
+  original:
+    commit: d47c29187e5f0c616b992f296e83d0f3253832d3
+    git: https://github.com/stepa1000/free-profunctor.git
+- completed:
+    hackage: bpann-0.1.1@sha256:f3245a48d2a67f7e6551559ecc216f841db4887311392e60f53c07a0eeab3365,738
+    pantry-tree:
+      sha256: 2b0f6446394f669f6ab30725358f2ea7f28f919955005bdde74bd46adca68f75
+      size: 204
+  original:
+    hackage: bpann-0.1.1@sha256:f3245a48d2a67f7e6551559ecc216f841db4887311392e60f53c07a0eeab3365,738
+- completed:
+    hackage: functor-combinators-0.4.1.2@sha256:016ea62aaa27ad749d496d07e90ac8628c5d4fb910f650da539acd6aa548a996,5694
+    pantry-tree:
+      sha256: 189bc904b94ae0300bfe91d3eef4c9369d41069786b5f02554422211b47ba7c9
+      size: 2700
+  original:
+    hackage: functor-combinators-0.4.1.2@sha256:016ea62aaa27ad749d496d07e90ac8628c5d4fb910f650da539acd6aa548a996,5694
 snapshots:
 - completed:
     sha256: 14ca51a9a597c32dd7804c10d079feea3d0ae40c5fbbb346cbd67b3ae49f6d01

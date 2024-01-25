@@ -39,6 +39,12 @@ getOperand = coask . coadjFst
 getOperator :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> Operator a
 getOperator = coask . coadjSnd
 
+getAdjOperand :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> W.AdjointT (Env Operand) (Reader Operand) w b
+getAdjOperand = snd . unCompSysAdjComonad
+
+getAdjOperator :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> W.AdjointT (Env Operand) (Reader Operand) w b
+getAdjOperator = fst . unCompSysAdjComonad
+
 idIxWaveSpace :: (Comonad w, MArray TArray a IO) => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO Bool
 idIxWaveSpace w = do
   let operD = getOperand w

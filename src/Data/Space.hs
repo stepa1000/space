@@ -35,6 +35,7 @@ import Data.Functor.Identity
 import Data.Functor
 import Data.Generics.Product.Any
 import Graphics.Gloss.Data.Picture
+import Graphics.Gloss.Data.Color
 
 data SpaceOperator = SpaceOperator
   { spaceMapBool :: [Map (Int,Int) Bool]
@@ -61,5 +62,12 @@ initSpaceOperator = initWaveOperator (return . (`div` 2))
 iterateSpace :: MArray TArray SpaceOperator IO => W.AdjointT (WaveSpaceL SpaceOperator) (WaveSpaceR SpaceOperator) Identity () -> IO ()
 iterateSpace = iterateWaveOperator
 
-updateSpace :: MArray TArray SpaceOperator IO => W.AdjointT (WaveSpaceL SpaceOperator) (WaveSpaceR SpaceOperator) Identity Float -> IO Picture
-updateSpace = coadjDrowOperand . snd . unCompSysAdjComonad
+drowSpace :: MArray TArray SpaceOperator IO => W.AdjointT (WaveSpaceL SpaceOperator) (WaveSpaceR SpaceOperator) Identity Float -> IO Picture
+drowSpace = fmap (Color white) . coadjDrowOperand . getAdjOperand
+
+spaceRandomKeyWrite :: MArray TArray SpaceOperator IO => 
+  Int -> 
+  Int -> 
+  W.AdjointT (WaveSpaceL SpaceOperator) (WaveSpaceR SpaceOperator) Identity (Int,Int) -> 
+  IO Key
+spaceRandomKeyWrite h ikey = coadjRandomKeyWrite h ikey . getAdjOperand

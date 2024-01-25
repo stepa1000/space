@@ -31,6 +31,8 @@ dependencies:
 - generic-lens
 - lens
 - random
+- async
+- gloss
 
 ghc-options:
 - -Wall

@@ -22,45 +22,82 @@ import Control.Lens
 import Control.Base.Comonad
 import System.Random
 import Control.Exception
+import Control.Concurrent.Async
+import Data.Map
+import Data.Foldable
 
 class HasWavwOperator a where
-  listBool :: Lens' a [[Bool]]
+  mapBool :: Lens' a [Map (Int,Int) Bool]
   area :: Lens' a Int
   
 type WaveSpaceL a = Env Operand :.: Env (Operator a)
 type WaveSpaceR a = Reader (Operator a) :.: Reader Operand
 
-idIxWaveSpace :: (Comonad w, MArray TArray a IO) => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w a -> IO Bool
+getOperand :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> Operand
+getOperand = coask . coadjFst 
+
+getOperator :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> Operator a
+getOperator = coask . coadjSnd
+
+idIxWaveSpace :: (Comonad w, MArray TArray a IO) => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO Bool
 idIxWaveSpace w = do
-  let operD = coask $ coadjFst w
-  let operT = coask $ coadjSnd w
+  let operD = getOperand w
+  let operT = getOperator w
   ixD <- getBounds operD
   ixT <- getBounds operT
   return $ ixD == ixT
   
 initWaveOperator :: (Comonad w, MArray TArray a IO, HasWavwOperator a) => 
-  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w a -> IO ()
-initWaveOperator w = do
+  (Int -> IO Int) ->
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO ()
+initWaveOperator f w = do
   bIx <- idIxWaveSpace w
   if bIx
     then do
-      let operD = coask $ coadjFst w
+      let operD = getOperand w
       ixD <- getBounds operD
-      mapM_ (\i -> initWaveOperator' i w) ixD
+      mapM_ (\i -> initWaveOperator' i w) $ range ixD
     else throwIO $ ErrorCall "idIxWaveSpace: not eq"
   where
     initWaveOperator' i w = do 
-      let operD = coask $ coadjFst w
-      let operT = coask $ coadjSnd w
+      let operD = getOperand w
+      let operT = getOperator w
+      ixD <- getBounds operD
       operator <- readArray operT i
       lb <- atomically $ getSectorList operD i (operator^.area)
       let lengthLBool = length lb
       let combi = 2^lengthLBool
       let halfCombi = combi/2
       mapM_ (\_-> do
-        rlBool <- mapM (const randomIO) [0..lengthLBool]
+        h2 <- f lengthLBool
+        rlBool <- mapM (const randomIO) [0.. h2]
+        let pi = sectorBox i (operator^.area)
+        lri <- mapM (const (randomRIO pi)) [0.. h2]
+        let li = Prelude.filter (inRange ixD) lri 
+        let rmapBool = mconcat $ Prelude.map (\(x,y)-> singleton x y) $ zip li rlBool
         operatorN <- readArray operT i
-        writeArray operT i (over listBool (rlBool:) operatorN)
+        writeArray operT i (over mapBool (rmapBool:) operatorN)
         ) [0..halfCombi]
-      
+
+iterateWaveOperator :: (Comonad w, MArray TArray a IO, HasWavwOperator a) => 
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO ()
+iterateWaveOperator w = do
+  let operD = getOperand w
+  let operT = getOperator w
+  ixD <- getBounds operD
+  mapConcurrently_ (\ i -> do
+    atomically $ do
+      operator <- readArray operT i
+      let lPatternBoll = operator^.mapBool
+      b <- foldlM (\b0 p -> do
+        let lk = keys p
+        bx <- mapM (\k->do
+          let (Just bk) = Data.Map.lookup k p
+          bd <- readArray operD i
+          return $ bd == bk
+          ) lk
+        return $ b0 || (and bx)
+        ) False lPatternBoll
+      writeArray operD i b
+    ) $ range ixD
   

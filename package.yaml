@@ -33,6 +33,8 @@ dependencies:
 - random
 - async
 - gloss
+- coandkleisli
+- yaml
 
 ghc-options:
 - -Wall

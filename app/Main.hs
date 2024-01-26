@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Main (main) where
 
@@ -39,18 +40,23 @@ import Graphics.Gloss.Data.Color
 import Graphics.Gloss.Interface.IO.Game
 import Data.Space
 import Graphics.Gloss.Interface.IO.Interact
+import Data.CoAndKleisli
+import Data.Logger
 
 main :: IO ()
-main = playIO 
-  (InWindow "WaveSpace" (500,500) (0,0))
-  black
-  1
-  (initEmptySpace (2,5) 1000)
-  (drowSpace . fmap (const 50))
-  eventSpace
-  (return . (const id))
+main = do
+  w <- initEmptySpace Debug (2,5) 1000
+  playIO 
+    (InWindow "WaveSpace" (500,500) (0,0))
+    black
+    1
+    w
+    (drowSpace . fmap (const 50))
+    eventSpace
+    (const return)
   where
     eventSpace (EventKey (SpecialKey KeySpace) Down _ _) = flipWM . extend iterateSpace
     eventSpace (EventKey (Char 'r') Down _ _) = flipWM . extend initSpaceOperator
-    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) = fmap void . flipWM . extend (spaceRandomKeyWrite)
+    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) = fmap void . flipWM . extend (spaceRandomKeyWrite 2 12) . fmap (const (5,5))
+    eventSpace _ = return
   

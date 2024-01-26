@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts#-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.Space.Operator.Wave where
 
@@ -26,23 +28,27 @@ import Control.Concurrent.Async
 import Data.Map
 import Data.Foldable
 
-class HasWavwOperator a where
+class HasWaveOperator a where
   mapBool :: Lens' a [Map (Int,Int) Bool]
   area :: Lens' a Int
   
 type WaveSpaceL a = Env Operand :.: Env (Operator a)
-type WaveSpaceR a = Reader (Operator a) :.: Reader Operand
+type WaveSpaceR a = Reader (Operator a) :.: Reader Operand 
 
 getOperand :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> Operand
-getOperand = coask . coadjFst 
+getOperand = coask . getAdjOperand 
 
 getOperator :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> Operator a
-getOperator = coask . coadjSnd
-
+getOperator = coask . getAdjOperator
+{-
+class HaveWaveSpace fl fr where
+  getAdjOperand :: Comonad w => W.AdjointT (fl a) (fr a) w b -> W.AdjointT (Env Operand) (Reader Operand) w b
+  getAdjOperator :: Comonad w => W.AdjointT (fl a) (fr a) w b -> W.AdjointT (Env (Operator a)) (Reader (Operator a)) w b
+-}
 getAdjOperand :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> W.AdjointT (Env Operand) (Reader Operand) w b
 getAdjOperand = snd . unCompSysAdjComonad
 
-getAdjOperator :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> W.AdjointT (Env Operand) (Reader Operand) w b
+getAdjOperator :: Comonad w => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> W.AdjointT (Env (Operator a)) (Reader (Operator a)) w b
 getAdjOperator = fst . unCompSysAdjComonad
 
 idIxWaveSpace :: (Comonad w, MArray TArray a IO) => W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO Bool
@@ -53,7 +59,7 @@ idIxWaveSpace w = do
   ixT <- getBounds operT
   return $ ixD == ixT
   
-initWaveOperator :: (Comonad w, MArray TArray a IO, HasWavwOperator a) => 
+initWaveOperator :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
   (Int -> IO Int) ->
   W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO ()
 initWaveOperator f w = do
@@ -85,7 +91,7 @@ initWaveOperator f w = do
         writeArray operT i (over mapBool (rmapBool:) operatorN)
         ) [0..halfCombi]
 
-iterateWaveOperator :: (Comonad w, MArray TArray a IO, HasWavwOperator a) => 
+iterateWaveOperator :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
   W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO ()
 iterateWaveOperator w = do
   let operD = getOperand w

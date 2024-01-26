@@ -92,5 +92,5 @@ coadjDrowOperand :: Comonad w => W.AdjointT (Env Operand) (Reader Operand) w Flo
 coadjDrowOperand = coadjBiparam (\ops i-> drowOperand i ops)
 
 coadjRandomKeyWrite :: Comonad w => Int -> Int -> W.AdjointT (Env Operand) (Reader Operand) w (Int,Int) -> IO Key
-coadjRandomKeyWrite h ikey = coadjBiparam (\ops i-> randomKeyWrite ops i h key)
+coadjRandomKeyWrite h ikey = coadjBiparam (\ops i-> randomKeyWrite ops i h ikey)
 

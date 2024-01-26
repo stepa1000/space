@@ -15,16 +15,14 @@ import Control.Core.Biparam
 import Control.Monad.Reader
 import Data.Functor.Adjunction
 import GHC.Generics
-import Data.Array.MArray
-import Data.Array
+import Data.Array as A
 import Data.Ix
 import Graphics.Gloss.Data.Picture
 import GHC.Float
 import System.Random
+import Control.Base.Comonad
 
-instance MArray TArray Bool IO
-
-type Operand = TArray (Int,Int) Bool
+type Operand = Array (Int,Int) Bool
 
 initialOperandIO :: Int -> IO Operand
 initialOperandIO i = newArray ((0,0),(i-1,i-1)) False
@@ -37,34 +35,40 @@ sectorBox (xi,yi) h = let
   yi2 = yi + h
   in ((xi1,yi1),(xi2,yi2))
 
-getSectorList :: Operand -> (Int,Int) -> Int -> STM [Bool]
-getSectorList ops (xi,yi) h = do
+type AdjOperandL = Env Operand
+type AdjOperandR = Reader Operand
+
+getSectorList :: Monad m => (Int,Int) -> Int -> M.AdjointT AdjOperandL AdjOperandR m ()
+getSectorList (xi,yi) h = do
+  ops <- adjGetEnv
   bounds <- getBounds ops
   let ((xi1,yi1),(xi2,yi2)) = sectorBox (xi,yi) h
   let li = filter (inRange bounds) $ range ((xi1,yi1),(xi2,yi2))
-  mapM (\i-> readArray ops i) li
+  return $ fmap (\i-> ops A.! i) li
 
 type Key = [((Int,Int),Bool)]
 
-getSectorListWithKey :: Operand -> (Int,Int) -> Int -> STM Key
-getSectorListWithKey ops (xi,yi) h = do
+getSectorListWithKey :: Monad m => (Int,Int) -> Int -> M.AdjointT AdjOperandL AdjOperandR m Key
+getSectorListWithKey (xi,yi) h = do
+  ops <- adjGetEnv
   bounds <- getBounds ops
   let ((xi1,yi1),(xi2,yi2)) = sectorBox (xi,yi) h
   let li = filter (inRange bounds) $ range ((xi1,yi1),(xi2,yi2))
-  mapM (\i-> do
+  return $ map (\i-> do
     b <- readArray ops i
     return (i,b)
     ) li
 
-randomKeyWrite :: Operand -> (Int,Int) -> Int -> Int -> IO Key
-randomKeyWrite ope (xi,yi) h ikey = do
+randomKeyWrite :: (Monad m, MonadIO m) => (Int,Int) -> Int -> Int -> M.AdjointT AdjOperandL AdjOperandR m IO Key
+randomKeyWrite (xi,yi) h ikey = do
+  ope <- adjGetEnv
   bounds <- getBounds ope
   let ikey2 = if ikey > (h*2)^2 then (h*2)^2 else ikey
-  rlBool <- mapM (const randomIO) [0.. ikey2]
+  rlBool <- mapM (const $ liftIO $ randomIO) [0.. ikey2]
   let pi = sectorBox (xi,yi) h
-  lri <- mapM (const (randomRIO pi)) [0..ikey2]
+  lri <- mapM (const (liftIO $ randomRIO pi)) [0..ikey2]
   let li = Prelude.filter (inRange bounds) lri 
-  mapM (\(i,b)->do
+  foldl (\(i,b)->do
       writeArray ope i b
       return (i,b)
     ) $ zip li rlBool

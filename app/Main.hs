@@ -45,18 +45,18 @@ import Data.Logger
 
 main :: IO ()
 main = do
-  w <- initEmptySpace Debug (2,5) 1000
+  w <- initEmptySpace Debug (1,2) 100
   playIO 
     (InWindow "WaveSpace" (500,500) (0,0))
     black
     1
     w
-    (drowSpace . fmap (const 50))
+    (fmap (Translate (-50) (-50)) . drowSpace . fmap (const 1))
     eventSpace
     (const return)
   where
-    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) = flipWM . extend iterateSpace
-    eventSpace (EventKey (Char 'r') Down _ _) = flipWM . extend initSpaceOperator
-    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) = fmap void . flipWM . extend (spaceRandomKeyWrite 2 12) . fmap (const (5,5))
-    eventSpace _ = return
+    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend iterateSpace a
+    eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! extend initSpaceOperatorKey a 
+    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 2 12) $! fmap (const (5,5)) a
+    eventSpace _ a = return a
   

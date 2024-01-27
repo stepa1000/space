@@ -46,7 +46,7 @@ packages:
     hackage: bpann-0.1.1@sha256:f3245a48d2a67f7e6551559ecc216f841db4887311392e60f53c07a0eeab3365,738
 snapshots:
 - completed:
-    sha256: 7b975b104cb3dbf0c297dfd01f936a4d2ee523241dd0b1ae960522b833fe3027
-    size: 714096
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/7.yaml
-  original: lts-22.7
+    sha256: 876a5c75d90718add42e1ad36d66000bf35050ce1c66748119897a32df613186
+    size: 563963
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2024/1/26.yaml
+  original: nightly-2024-01-26

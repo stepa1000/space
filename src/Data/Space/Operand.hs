@@ -22,8 +22,6 @@ import Graphics.Gloss.Data.Picture
 import GHC.Float
 import System.Random
 
-instance MArray TArray Bool IO
-
 type Operand = TArray (Int,Int) Bool
 
 initialOperandIO :: Int -> IO Operand
@@ -60,7 +58,7 @@ randomKeyWrite :: Operand -> (Int,Int) -> Int -> Int -> IO Key
 randomKeyWrite ope (xi,yi) h ikey = do
   bounds <- getBounds ope
   let ikey2 = if ikey > (h*2)^2 then (h*2)^2 else ikey
-  rlBool <- mapM (const randomIO) [0.. ikey2]
+  let rlBool = fmap (const True) [0.. ikey2]
   let pi = sectorBox (xi,yi) h
   lri <- mapM (const (randomRIO pi)) [0..ikey2]
   let li = Prelude.filter (inRange bounds) lri 

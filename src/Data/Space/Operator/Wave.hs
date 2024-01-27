@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts#-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Data.Space.Operator.Wave where
 
@@ -15,8 +16,10 @@ import Control.Concurrent.STM.TArray
 import Control.Core.Composition
 import Control.Monad.Reader
 import Control.Monad.STM
+import Control.Monad
 import Data.Functor.Adjunction
 import GHC.Generics
+import GHC.Float
 import Data.Array.MArray
 import Data.Space.Operand
 import Data.Space.Operator
@@ -27,6 +30,7 @@ import Control.Exception
 import Control.Concurrent.Async
 import Data.Map
 import Data.Foldable
+import Data.Logger
 
 class HasWaveOperator a where
   mapBool :: Lens' a [Map (Int,Int) Bool]
@@ -58,42 +62,70 @@ idIxWaveSpace w = do
   ixD <- getBounds operD
   ixT <- getBounds operT
   return $ ixD == ixT
-  
-initWaveOperator :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
+
+initWaveOperatorKey :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
+  W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->
+  (Int -> IO Int) ->
   (Int -> IO Int) ->
   W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO ()
-initWaveOperator f w = do
+initWaveOperatorKey wl f f2 w = do
   bIx <- idIxWaveSpace w
   if bIx
     then do
+      coadjLogDebugM "initWaveOperatorKey:start" wl
       let operD = getOperand w
       ixD <- getBounds operD
-      mapM_ (\i -> initWaveOperator' i w) $ range ixD
-    else throwIO $ ErrorCall "idIxWaveSpace: not eq"
+      mapM_ (\i -> initWaveOperator' wl i w) $ range ixD
+    else do
+      coadjLogErrorM "idIxWaveSpace: not eq" wl
+      throwIO $ ErrorCall "idIxWaveSpace: not eq"
   where
-    initWaveOperator' i w = do 
+    initWaveOperator' wl i w = do 
       let operD = getOperand w
       let operT = getOperator w
       ixD <- getBounds operD
       operator <- readArray operT i
       lb <- atomically $ getSectorList operD i (operator^.area)
       let lengthLBool = length lb
-      let combi = 2^lengthLBool
-      let halfCombi = combi/2
-      mapM_ (\_-> do
+      fi <- f2 lengthLBool
+      forM_ [0..fi] (\j-> do
+        coadjLogDebugM ("initWaveOperatorKey:lengthLBool:" .< lengthLBool) wl
+        coadjLogDebugM ("initWaveOperatorKey:IndexForList:" .< j) wl
         h2 <- f lengthLBool
-        rlBool <- mapM (const randomIO) [0.. h2]
+        coadjLogDebugM ("initWaveOperatorKey:functionForBoxArea:" .< h2) wl
+        let rlBool = fmap (const True) [0.. h2]
         let pi = sectorBox i (operator^.area)
         lri <- mapM (const (randomRIO pi)) [0.. h2]
         let li = Prelude.filter (inRange ixD) lri 
         let rmapBool = mconcat $ Prelude.map (\(x,y)-> singleton x y) $ zip li rlBool
         operatorN <- readArray operT i
+        coadjLogDebugM "initWaveOperatorKey:operatorN:readArray:OK" wl
         writeArray operT i (over mapBool (rmapBool:) operatorN)
-        ) [0..halfCombi]
+        coadjLogDebugM "initWaveOperatorKey:operatorN:writeArray:OK" wl
+        )
+
+clearWaveOperatorKey :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
+  W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
+  IO ()
+clearWaveOperatorKey wl w = do
+  let operT = getOperator w
+  ixT <- getBounds operT
+  coadjLogDebugM ("clearWaveOperatorKey:bound:" .< ixT) wl
+  coadjLogDebugM "clearWaveOperatorKey:mapM_:start" wl
+  mapM_ (\i -> do
+    coadjLogDebugM ("clearWaveOperatorKey:mapM_:index:" .< i) wl
+    operatorN <- readArray operT i
+    coadjLogDebugM "clearWaveOperatorKey:readArray:OK" wl
+    writeArray operT i (set mapBool [] operatorN)
+    coadjLogDebugM "clearWaveOperatorKey:writeArray:OK" wl
+    ) $ range ixT
+  coadjLogDebugM "clearWaveOperatorKey:mapM_:end" wl
 
 iterateWaveOperator :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
+  W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->
   W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO ()
-iterateWaveOperator w = do
+iterateWaveOperator wl w = do
   let operD = getOperand w
   let operT = getOperator w
   ixD <- getBounds operD
@@ -110,6 +142,7 @@ iterateWaveOperator w = do
           ) lk
         return $ b0 || (and bx)
         ) False lPatternBoll
+      when b $ do
+        coadjLogDebugM ("iterateWaveOperator:lPatternBoll:" .< lPatternBoll) wl
       writeArray operD i b
     ) $ range ixD
-  

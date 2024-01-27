@@ -26,15 +26,15 @@ data LogLevel
   | Error
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-logDebug,logInfo,logWarning,logError :: LogLevel -> String -> String
-logDebug ll s | ll <= Debug     = show Debug ++ ":" ++ s 
-logDebug _ _= ""
-logInfo ll s | ll <= Info       = show Info ++ ":" ++ s
-logInfo _ _ = ""
-logWarning ll s | ll <= Warning = show Warning ++ ":" ++ s 
-logWarning _ _ =""
-logError ll s | ll <= Error     = show Error ++ ":" ++ s  
-logError _ _ = ""
+logDebug,logInfo,logWarning,logError :: LogLevel -> String -> Maybe String
+logDebug ll s | ll <= Debug     = Just $ show Debug ++ ":" ++ s 
+logDebug _ _= Nothing
+logInfo ll s | ll <= Info       = Just $ show Info ++ ":" ++ s
+logInfo _ _ = Nothing
+logWarning ll s | ll <= Warning = Just $ show Warning ++ ":" ++ s 
+logWarning _ _ = Nothing
+logError ll s | ll <= Error     = Just $ show Error ++ ":" ++ s  
+logError _ _ = Nothing
 
 -- | Concatenates a text and an instance of 'Show'. This is a
 -- convenience function to make logger function applications more
@@ -55,8 +55,8 @@ createWarning = createCoadj $ Identity Warning
 createError = createCoadj $ Identity Error
 -}
 coadjLogDebugM,coadjLogInfoM,coadjLogWarningM,coadjLogErrorM :: (Comonad w,Applicative f) => 
-  W.AdjointT (Env LogLevel) (Reader LogLevel) w String -> f ()
-coadjLogDebugM = coadjBiparam (\ops i-> traceM (logDebug ops i))
-coadjLogInfoM = coadjBiparam (\ops i-> traceM (logInfo ops i))
-coadjLogWarningM = coadjBiparam (\ops i-> traceM (logWarning ops i))
-coadjLogErrorM = coadjBiparam (\ops i-> traceM (logError ops i))
+  String -> W.AdjointT (Env LogLevel) (Reader LogLevel) w b -> f ()
+coadjLogDebugM i = coadjBiparam (\ops _-> maybe (pure ()) traceM (logDebug ops i))
+coadjLogInfoM i = coadjBiparam (\ops _-> maybe (pure ()) traceM (logInfo ops i))
+coadjLogWarningM i = coadjBiparam (\ops _-> maybe (pure ()) traceM (logWarning ops i))
+coadjLogErrorM i = coadjBiparam (\ops _-> maybe (pure ()) traceM (logError ops i))

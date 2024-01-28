@@ -54,6 +54,20 @@ getSectorListWithKey ops (xi,yi) h = do
     return (i,b)
     ) li
 
+oneWriteToOperand :: Operand -> (Int,Int) -> IO ()
+oneWriteToOperand ope i = do
+  bounds <- getBounds ope
+  if inRange bounds i
+    then writeArray ope i True
+    else error "oneWriteToOperand:inRange:False"
+
+oneReadToOperand :: Operand -> (Int,Int) -> IO Bool
+oneReadToOperand ope i = do
+  bounds <- getBounds ope
+  if inRange bounds i
+    then readArray ope i
+    else error "oneWriteToOperand:inRange:False"
+
 randomKeyWrite :: Operand -> (Int,Int) -> Int -> Int -> IO Key
 randomKeyWrite ope (xi,yi) h ikey = do
   bounds <- getBounds ope
@@ -78,6 +92,12 @@ drowOperand h o = do
     ) $ range bounds
   return $ Pictures lp
 
+clearOperand :: Operand -> IO ()
+clearOperand ope = do
+  bounds <- getBounds ope
+  mapM_ (\i-> writeArray ope i False
+    ) $ range bounds
+
 -- Adjoint
 
 coadjGetSectorList :: Comonad w => Int -> W.AdjointT (Env Operand) (Reader Operand) w (Int,Int) -> STM [Bool]
@@ -92,3 +112,11 @@ coadjDrowOperand = coadjBiparam (\ops i-> drowOperand i ops)
 coadjRandomKeyWrite :: Comonad w => Int -> Int -> W.AdjointT (Env Operand) (Reader Operand) w (Int,Int) -> IO Key
 coadjRandomKeyWrite h ikey = coadjBiparam (\ops i-> randomKeyWrite ops i h ikey)
 
+coadjClearOperand :: Comonad w => W.AdjointT (Env Operand) (Reader Operand) w b -> IO ()
+coadjClearOperand = coadjBiparam (\ope _ -> clearOperand ope)
+
+coadjOneWriteToOperand :: Comonad w => (Int,Int) -> W.AdjointT (Env Operand) (Reader Operand) w b -> IO ()
+coadjOneWriteToOperand i = coadjBiparam (\ope _ -> oneWriteToOperand ope i)
+
+coadjOneReadToOperand :: Comonad w => (Int,Int) -> W.AdjointT (Env Operand) (Reader Operand) w b -> IO Bool
+coadjOneReadToOperand i = coadjBiparam (\ope _ -> oneReadToOperand ope i)

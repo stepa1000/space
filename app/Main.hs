@@ -44,19 +44,29 @@ import Data.CoAndKleisli
 import Data.Logger
 
 main :: IO ()
-main = do
-  w <- initEmptySpace Debug (1,2) 100
+main = runSpace
+  --testSpace
+  
+runSpace :: IO ()
+runSpace = do
+  w <- initEmptySpace Info (1,3) 50
   playIO 
     (InWindow "WaveSpace" (500,500) (0,0))
     black
     1
     w
-    (fmap (Translate (-50) (-50)) . drowSpace . fmap (const 1))
+    (fmap (Translate (-50) (-50)) . drowSpace . fmap (const 10))
     eventSpace
     (const return)
   where
     eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend iterateSpace a
-    eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! extend initSpaceOperatorKey a 
-    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 2 12) $! fmap (const (5,5)) a
+    eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! 
+      extend (initSpaceOperatorKey (return . (+ (-1)) . (`div` 2)) (return . (`div` 2))) a 
+    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 3 12) $! fmap (const (10,10)) a
     eventSpace _ a = return a
-  
+
+{-
+
+(return . (+ (-1)) . (`div` 2))
+-}
+

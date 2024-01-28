@@ -40,6 +40,7 @@ import Graphics.Gloss.Data.Picture
 import Graphics.Gloss.Data.Color
 import Data.Logger
 import Control.Exception
+import Debug.Trace
 
 data SpaceOperator = SpaceOperator
   { spaceMapBool :: [Map (Int,Int) Bool]
@@ -95,24 +96,51 @@ initEmptySpace ll pa h = do
         ) $ range ((0,0),(h-1,h-1))
       coadjLogInfoM "initial Operands" wll
       oper <- initialOperandIO h
-      return $ void $ ((createCoadj $ Identity aso) @## (createCoadj $ Identity oper)) @## wll
+      tvoper <- newTVarIO oper
+      return $ void $ ((createCoadj $ Identity aso) @## (createCoadj $ Identity tvoper)) @## wll
     (Left e) -> error $ "initEmptySpace:" .< e
 
-initSpaceOperatorKey :: W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> IO ()
-initSpaceOperatorKey w = do
+initOneTestSpace :: IO (W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity ())
+initOneTestSpace = initEmptySpace Debug (1,1) 2 
+
+testSpace :: IO ()
+testSpace = do
+  w <- initOneTestSpace
+  wope <- getAdjOperand $ getWaveSpace w
+  initWaveOperatorKeyOne (getLogLevel w) (1,1) (0,0) (getWaveSpace w)
+  coadjOneWriteToOperand (0,0) wope
+  b0 <- coadjOneReadToOperand (0,0) wope
+  let ope = getOperator $ getWaveSpace w
+  operator <- readArray ope (1,1)
+  coadjLogInfoM ("mapBool:" .< (operator^.mapBool)) $ getLogLevel w
+  coadjLogInfoM ("operand:(0,0):" .< b0) $ getLogLevel w
+  iterateSpace w
+  wope2 <- getAdjOperand $ getWaveSpace w
+  traceM $ "post iterate"
+  b <- coadjOneReadToOperand (1,1) $ wope2
+  b02 <- coadjOneReadToOperand (0,0) $ wope2
+  coadjLogInfoM ("operand:(1,1):" .< b) $ getLogLevel w
+  coadjLogInfoM ("operand:(0,0):" .< b02) $ getLogLevel w
+
+initSpaceOperatorKey ::
+  (Int -> IO Int) ->
+  (Int -> IO Int) -> 
+  W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> IO ()
+initSpaceOperatorKey f1 f2 w = do
   coadjLogInfoM "initSpaceOperator:call" $ getLogLevel w
-  clearWaveOperatorKey (getLogLevel w) (getWaveSpace w)
-  coadjLogDebugM "initSpaceOperator:clear" $ getLogLevel w
-  (initWaveOperatorKey (getLogLevel w) (return . (`div` 2)) (return . const 20) . getWaveSpace) w
+  (initWaveOperatorKey (getLogLevel w) f1 f2 . getWaveSpace) w
   coadjLogDebugM "initSpaceOperator:end" $ getLogLevel w
 
 iterateSpace :: W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> IO ()
 iterateSpace w = do
-  coadjLogInfoM "iterateSpace:call" $ getLogLevel w
-  (iterateWaveOperator . getWaveSpace) w
+  coadjLogInfoM "iterateSpace:call:start" $ getLogLevel w
+  (iterateWaveOperator (getLogLevel w) . getWaveSpace) w
+  coadjLogInfoM "iterateSpace:call:end" $ getLogLevel w
 
 drowSpace :: W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity Float -> IO Picture
-drowSpace = fmap (Color white) . coadjDrowOperand . getAdjOperand . getWaveSpace
+drowSpace w = do
+  wope <- getAdjOperand $ getWaveSpace w
+  fmap (Color white) $ coadjDrowOperand wope
 
 spaceRandomKeyWrite :: 
   Int -> -- length array
@@ -120,5 +148,6 @@ spaceRandomKeyWrite ::
   W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity (Int,Int) -> 
   IO Key
 spaceRandomKeyWrite h ikey w = do
+  wope <- getAdjOperand $ getWaveSpace w
   coadjLogInfoM "spaceRandomKeyWrite:call" $ getLogLevel w
-  (coadjRandomKeyWrite h ikey . getAdjOperand . getWaveSpace) w
+  coadjRandomKeyWrite h ikey wope

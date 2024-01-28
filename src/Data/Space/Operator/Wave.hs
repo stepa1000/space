@@ -101,6 +101,26 @@ initWaveOperatorKeyOne wl pp pk w = do
       coadjLogErrorM "initWaveOperatorKeyOne: if False" wl
       throwIO $ ErrorCall "initWaveOperatorKeyOne: if False"
 
+initWaveOperatorKeyList (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
+  W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 -> 
+  (Int,Int) -> -- point
+  [(Int,Int)] -> -- key
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
+  IO ()
+initWaveOperatorKeyList wl pp pk w = do
+  bIx <- idIxWaveSpace w
+  operD <- getOperand w
+  ixD <- getBounds operD
+  let operT = getOperator w
+  if and [bIx, inRange ixD pp, inRange ixD pk]
+    then do
+      let m = mconcat $ fmap (\i-> singleton i) True pk
+      operatorN <- readArray operT pp
+      writeArray operT pp (over mapBool (m:) operatorN)
+    else do
+      coadjLogErrorM "initWaveOperatorKeyOne: if False" wl
+      throwIO $ ErrorCall "initWaveOperatorKeyOne: if False"
+
 initWaveOperatorKey :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
   W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->
   (Int -> IO Int) -> -- number of length keys

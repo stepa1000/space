@@ -42,6 +42,23 @@ getSectorList ops (xi,yi) h = do
   let li = filter (inRange bounds) $ range ((xi1,yi1),(xi2,yi2))
   mapM (\i-> readArray ops i) li
 
+subSectors :: (Int,Int) -> Int -> [(Int,Int),(Int,Int)]
+subSectors (xi,yi) h = let
+  xi1 = xi - h
+  xi2 = xi + h
+  yi1 = yi - h
+  yi2 = yi + h
+  lx = [xi1..xi2]
+  ly = [yi1..yi2]
+  in do
+    x1 <- lx
+    x2 <- lx
+    y1 <- ly
+    y2 <- ly
+    guard (x1<=x2)
+    guard (y1<=y2)
+    return ((x1,y1),(x2,y2))
+
 type Key = [((Int,Int),Bool)]
 
 getSectorListWithKey :: Operand -> (Int,Int) -> Int -> STM Key

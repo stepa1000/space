@@ -54,21 +54,6 @@ instance HasWaveOperator SpaceOperator where
 type AdjSpaceL a = Env LogLevel :.: WaveSpaceL a
 type AdjSpaceR a = WaveSpaceR a :.: Reader LogLevel
 
-{-IO where
-  getBounds (TArray l u _ _) = return (l, u)
-  getNumElements (TArray _ _ n _) = return n
-  newArray b e = IO $ newTArray# b e
-  unsafeRead (TArray _ _ _ arr# ) (I# i# ) = case (indexArray# arr# i# ) of
-    (# tvar# #) -> readTVarIO (TVar tvar#)
-  unsafeWrite (TArray _ _ _ arr# ) (I# i# ) e = case indexArray# arr# i# of
-    (# tvar# #) -> atomically $ writeTVar (TVar tvar# ) e
--}
-
-{-
-class HaveAdjSpace fl fr where
-  getLogLevel :: Comonad w => W.AdjointT (fl a) (fr a) w b -> W.AdjointT (Env LogLevel) (Reader LogLevel) w b
-  getWaveSpace :: Comonad w => W.AdjointT (fl a) (fr a) w b -> W.AdjointT (WaveSpaceR a) (WaveSpaceL a) w b
--}
 getLogLevel :: Comonad w => W.AdjointT (AdjSpaceL a) (AdjSpaceR a) w b -> W.AdjointT (Env LogLevel) (Reader LogLevel) w b
 getLogLevel = snd . unCompSysAdjComonad
 
@@ -122,10 +107,21 @@ testSpace = do
   coadjLogInfoM ("operand:(1,1):" .< b) $ getLogLevel w
   coadjLogInfoM ("operand:(0,0):" .< b02) $ getLogLevel w
 
+initSpaceOperatorKeySectors ::
+  Int ->  
+  (((Int,Int),(Int,Int)) -> IO (Maybe Int)) -> 
+  W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> 
+  IO ()
+initSpaceOperatorKeySectors c f w = do
+  coadjLogInfoM "initSpaceOperatorKeySectors:call" $ getLogLevel w
+  initWaveOperatorKeySubSector (getLogLevel w) c f (getWaveSpace w)
+  coadjLogInfoM "initSpaceOperatorKeySectors:end" $ getLogLevel w
+
 initSpaceOperatorKey ::
   (Int -> IO Int) ->
   (Int -> IO Int) -> 
-  W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> IO ()
+  W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> 
+  IO ()
 initSpaceOperatorKey f1 f2 w = do
   coadjLogInfoM "initSpaceOperator:call" $ getLogLevel w
   (initWaveOperatorKey (getLogLevel w) f1 f2 . getWaveSpace) w

@@ -32,6 +32,7 @@ import System.Random
 import Control.Exception
 import Control.Concurrent.Async
 import Data.Map
+import Data.Maybe
 import Data.Foldable
 import Data.Logger
 
@@ -101,7 +102,7 @@ initWaveOperatorKeyOne wl pp pk w = do
       coadjLogErrorM "initWaveOperatorKeyOne: if False" wl
       throwIO $ ErrorCall "initWaveOperatorKeyOne: if False"
 
-initWaveOperatorKeyList (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
+initWaveOperatorKeyList :: (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
   W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 -> 
   (Int,Int) -> -- point
   [(Int,Int)] -> -- key
@@ -112,14 +113,47 @@ initWaveOperatorKeyList wl pp pk w = do
   operD <- getOperand w
   ixD <- getBounds operD
   let operT = getOperator w
-  if and [bIx, inRange ixD pp, inRange ixD pk]
+  if and [bIx, inRange ixD pp, and $ fmap (inRange ixD) pk]
     then do
-      let m = mconcat $ fmap (\i-> singleton i) True pk
+      let m = mconcat $ fmap (\i-> singleton i True) pk
       operatorN <- readArray operT pp
       writeArray operT pp (over mapBool (m:) operatorN)
     else do
       coadjLogErrorM "initWaveOperatorKeyOne: if False" wl
       throwIO $ ErrorCall "initWaveOperatorKeyOne: if False"
+
+initWaveOperatorKeySubSector :: (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
+  W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->
+  Int -> 
+  (((Int,Int),(Int,Int)) -> IO (Maybe Int)) ->
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
+  IO ()
+initWaveOperatorKeySubSector wl c f w = do
+  bIx <- idIxWaveSpace w
+  if bIx
+    then do
+      coadjLogDebugM "initWaveOperatorKeySubSector:start" wl
+      let operT = getOperator w
+      ixT <- getBounds operT
+      operWD <- getAdjOperand w
+      forM_ (range ixT) (\i->do
+        operatorI <- readArray operT i
+        let arreaOpe = operatorI^.area
+        let lsubS = subSectors c i arreaOpe
+        lm' <- forM lsubS (\p->do
+          mn <- f p
+          forM mn (\n-> forM [0..n] (\_-> do 
+              lib <- coadjRandomKeySector p n operWD
+              return $ mconcat $ fmap (\(i,b)-> singleton i b) lib
+              )
+            )
+          )
+        let lm = join $ join $ fmap maybeToList lm'
+        writeArray operT i (over mapBool (lm ++) operatorI)
+        )
+    else do
+      coadjLogErrorM "idIxWaveSpace: not eq" wl
+      throwIO $ ErrorCall "idIxWaveSpace: not eq"
 
 initWaveOperatorKey :: (Comonad w, MArray TArray a IO, HasWaveOperator a) => 
   W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->

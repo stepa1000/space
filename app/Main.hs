@@ -61,12 +61,14 @@ runSpace = do
   where
     eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend iterateSpace a
     eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! 
-      extend (initSpaceOperatorKey (return . (+ (-1)) . (`div` 2)) (return . (`div` 2))) a 
+      extend (initSpaceOperatorKeySectors 2 fISOKS ) a 
     eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 3 12) $! fmap (const (10,10)) a
     eventSpace _ a = return a
+    fISOKS p | boxS p >= 4 = return $ return $ (boxS p) `div` 2
+    fISOKS _ = return $ Nothing
 
 {-
-
+ extend (initSpaceOperatorKey (return . (+ (-1)) . (`div` 2)) (return . (`div` 2))) a 
 (return . (+ (-1)) . (`div` 2))
 -}
 

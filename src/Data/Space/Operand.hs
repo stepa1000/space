@@ -13,6 +13,7 @@ import Control.Concurrent.STM.TArray
 import Control.Core.Composition
 import Control.Core.Biparam
 import Control.Monad.Reader
+import Control.Monad
 import Data.Functor.Adjunction
 import GHC.Generics
 import Data.Array.MArray
@@ -35,6 +36,12 @@ sectorBox (xi,yi) h = let
   yi2 = yi + h
   in ((xi1,yi1),(xi2,yi2))
 
+boxS :: ((Int,Int),(Int,Int)) -> Int
+boxS ((x1,y1),(x2,y2)) = l1*l2 
+  where
+    l1 = abs (x1-x2)
+    l2 = abs (y1-y2)
+
 getSectorList :: Operand -> (Int,Int) -> Int -> STM [Bool]
 getSectorList ops (xi,yi) h = do
   bounds <- getBounds ops
@@ -42,8 +49,8 @@ getSectorList ops (xi,yi) h = do
   let li = filter (inRange bounds) $ range ((xi1,yi1),(xi2,yi2))
   mapM (\i-> readArray ops i) li
 
-subSectors :: (Int,Int) -> Int -> [(Int,Int),(Int,Int)]
-subSectors (xi,yi) h = let
+subSectors :: Int -> (Int,Int) -> Int -> [((Int,Int),(Int,Int))]
+subSectors c (xi,yi) h = let
   xi1 = xi - h
   xi2 = xi + h
   yi1 = yi - h
@@ -55,6 +62,8 @@ subSectors (xi,yi) h = let
     x2 <- lx
     y1 <- ly
     y2 <- ly
+    guard $ abs (x1-x2) > c
+    guard $ abs (y1-y2) > c
     guard (x1<=x2)
     guard (y1<=y2)
     return ((x1,y1),(x2,y2))
@@ -98,6 +107,15 @@ randomKeyWrite ope (xi,yi) h ikey = do
       return (i,b)
     ) $ zip li rlBool
 
+randomKeySector :: Operand -> ((Int,Int),(Int,Int)) -> Int -> IO Key
+randomKeySector ope ((x1,y1),(x2,y2)) h = do
+  bounds <- getBounds ope
+  let rlBool = fmap (const True) [0.. h]
+  lrx <- mapM (const (randomRIO (x1,x2))) [0..h]
+  lry <- mapM (const (randomRIO (y1,y2))) [0..h]
+  let li = Prelude.filter (inRange bounds) $ zip lrx lry
+  return $! zip li rlBool
+
 drowOperand :: Float -> Operand -> IO Picture
 drowOperand h o = do
   bounds <- getBounds o
@@ -137,3 +155,9 @@ coadjOneWriteToOperand i = coadjBiparam (\ope _ -> oneWriteToOperand ope i)
 
 coadjOneReadToOperand :: Comonad w => (Int,Int) -> W.AdjointT (Env Operand) (Reader Operand) w b -> IO Bool
 coadjOneReadToOperand i = coadjBiparam (\ope _ -> oneReadToOperand ope i)
+
+coadjRandomKeySector :: Comonad w =>
+  ((Int,Int),(Int,Int)) -> 
+  Int -> 
+  W.AdjointT (Env Operand) (Reader Operand) w b -> IO Key
+coadjRandomKeySector p i = coadjBiparam (\ope _ -> randomKeySector ope p i)

@@ -39,9 +39,11 @@ import Data.Logger
 
 class HasRActive a where
   chance :: Lens' a (Int,Int)
+  amountWeave :: Lens' a Int
 
 araundActive :: (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
-  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> IO [(Int,Int)]
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
+  IO [(Int,Int)]
 araundActive w = do
   let operT = getOperator w
   ixT <- getBounds operT
@@ -55,4 +57,41 @@ araundActive w = do
     ) 
   return $ catMaybes lmj
 
-
+memorizeWeave :: (Comonad w, MArray TArray a IO, HasWaveOperator a, HasRActive a) =>
+  (Int,Int) ->
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
+  IO ()
+memorizeWeave p w = do
+  let operT = getOperator w
+  ixT <- getBounds operT
+  operD <- getOperand w
+  operatorI <- readArray operT i
+  let arreaOpe = operatorI^.area
+  let lk = Prelude.filter (inRange ixT) $ range $ sectorBox i arreaOpe
+  lmb <- forM lk (\k-> do
+    b <- readArray operD k
+    return $ if b then Just (k,b) else Nothing
+    )
+  let m = mconcat $ fmap (\(k,b)-> singleton k b) $ join $ catMaybes lmb
+  writeArray operT i (over mapBool (m:) operatorN)
+  
+setChanceKeyForActive :: (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
+  IO ()
+setChanceKeyForActive w = do
+  let operT = getOperator w
+  ixT <- getBounds operT
+  operD <- getOperand w
+  lk <- araundActive w
+  forM_ lk (\k->do
+    operatorK <- readArray operT k
+    let (ch,mch) = operatorK^.chance
+    let amw = operatorK^.amountWeave
+    let lm = operatorK^.mapBool
+    if length lm < amv then do
+        mn <- randomRIO (0,mch)
+        if mn <= ch then do
+            memorizeWeave k w
+          else return ()
+      else return ()
+    )

@@ -30,6 +30,7 @@ library
       Data.Space.Operand
       Data.Space.Operator
       Data.Space.Operator.Wave
+      Data.Space.Operator.Weave
       Lib
   other-modules:
       Paths_space

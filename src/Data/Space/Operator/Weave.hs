@@ -39,7 +39,7 @@ import Data.Logger
 
 class HasRActive a where
   chance :: Lens' a (Int,Int)
-  amountWeave :: Lens' a Int
+  amountWeave :: Lens' a Int -- limitKyes
 
 araundActive :: (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
   W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
@@ -53,7 +53,7 @@ araundActive w = do
     let arreaOpe = operatorI^.area
     let lk = Prelude.filter (inRange ixT)  $ range $ sectorBox i arreaOpe
     lb <- forM lk (\k->readArray operD k)
-    if or lb then Just k else Nothing
+    if or lb then return $ Just i else return Nothing
     ) 
   return $ catMaybes lmj
 
@@ -65,17 +65,17 @@ memorizeWeave p w = do
   let operT = getOperator w
   ixT <- getBounds operT
   operD <- getOperand w
-  operatorI <- readArray operT i
+  operatorI <- readArray operT p
   let arreaOpe = operatorI^.area
-  let lk = Prelude.filter (inRange ixT) $ range $ sectorBox i arreaOpe
+  let lk = Prelude.filter (inRange ixT) $ range $ sectorBox p arreaOpe
   lmb <- forM lk (\k-> do
     b <- readArray operD k
     return $ if b then Just (k,b) else Nothing
     )
-  let m = mconcat $ fmap (\(k,b)-> singleton k b) $ join $ catMaybes lmb
-  writeArray operT i (over mapBool (m:) operatorN)
+  let m = mconcat $ fmap (\(k,b)-> singleton k b) $ catMaybes lmb
+  writeArray operT p (over mapBool (m:) operatorI)
   
-setChanceKeyForActive :: (Comonad w, MArray TArray a IO, HasWaveOperator a) =>
+setChanceKeyForActive :: (Comonad w, MArray TArray a IO, HasWaveOperator a, HasRActive a) =>
   W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b -> 
   IO ()
 setChanceKeyForActive w = do
@@ -88,12 +88,18 @@ setChanceKeyForActive w = do
     let (ch,mch) = operatorK^.chance
     let amw = operatorK^.amountWeave
     let lm = operatorK^.mapBool
-    if length lm < amv then do
+    if length lm < amw then do
         mn <- randomRIO (0,mch)
         if mn <= ch then do
             memorizeWeave k w
           else return ()
-      else return ()
+    else return ()
     )
 
-
+iterateWeave :: (Comonad w, MArray TArray a IO, HasWaveOperator a, HasRActive a) =>
+  W.AdjointT (Env LogLevel) (Reader LogLevel) w b2 ->
+  W.AdjointT (WaveSpaceL a) (WaveSpaceR a) w b ->
+  IO ()
+iterateWeave wl w = do
+  setChanceKeyForActive w
+  iterateWaveOperator wl w 

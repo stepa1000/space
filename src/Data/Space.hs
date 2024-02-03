@@ -29,6 +29,7 @@ import System.Random
 import Control.Exception
 import Control.Concurrent.Async
 import Data.Space.Operator.Wave
+import Data.Space.Operator.Weave
 import Data.Space.Operand
 import Data.Space.Operator
 import Data.Map
@@ -45,11 +46,17 @@ import Debug.Trace
 data SpaceOperator = SpaceOperator
   { spaceMapBool :: [Map (Int,Int) Bool]
   , spaceArea :: Int
+  , spaceChance :: (Int,Int)
+  , spaceAmountWeave :: Int
   } deriving Generic
 
 instance HasWaveOperator SpaceOperator where
   mapBool = the @"spaceMapBool"
   area = the @"spaceArea"
+
+instance HasRActive SpaceOperator where
+  chance = the @"spaceChance"
+  amountWeave = the @"spaceAmountWeave"
 
 type AdjSpaceL a = Env LogLevel :.: WaveSpaceL a
 type AdjSpaceR a = WaveSpaceR a :.: Reader LogLevel
@@ -62,10 +69,12 @@ getWaveSpace = fst . unCompSysAdjComonad
 
 initEmptySpace :: 
   LogLevel -> 
-  (Int,Int) -> 
-  Int -> 
+  (Int,Int) -> -- random area
+  Int -> -- length array
+  (Int,Int) -> -- chanse
+  Int -> -- amountWeave
   IO (W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity ())
-initEmptySpace ll pa h = do
+initEmptySpace ll pa h ch amw = do
   let wll = createCoadj $ Identity ll
   coadjLogInfoM "Initial SpaceOperators" wll
   easo <- try @SomeException $ newArray_ ((0,0),(h-1,h-1))
@@ -77,7 +86,7 @@ initEmptySpace ll pa h = do
           coadjLogDebugM "newGenArray:area: start generate" wll
           a <- randomRIO pa
           coadjLogDebugM ("newGenArray:area:" .< a) wll
-          writeArray aso i $ SpaceOperator [] a
+          writeArray aso i $ SpaceOperator [] a ch amw
         ) $ range ((0,0),(h-1,h-1))
       coadjLogInfoM "initial Operands" wll
       oper <- initialOperandIO h
@@ -86,7 +95,7 @@ initEmptySpace ll pa h = do
     (Left e) -> error $ "initEmptySpace:" .< e
 
 initOneTestSpace :: IO (W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity ())
-initOneTestSpace = initEmptySpace Debug (1,1) 2 
+initOneTestSpace = initEmptySpace Debug (1,1) 2 (50,100) 2
 
 testSpace :: IO ()
 testSpace = do
@@ -126,6 +135,12 @@ initSpaceOperatorKey f1 f2 w = do
   coadjLogInfoM "initSpaceOperator:call" $ getLogLevel w
   (initWaveOperatorKey (getLogLevel w) f1 f2 . getWaveSpace) w
   coadjLogDebugM "initSpaceOperator:end" $ getLogLevel w
+
+initIterateSpaceWeave :: 
+  W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () ->
+  IO ()
+initIterateSpaceWeave w = do
+  iterateWeave (getLogLevel w) (getWaveSpace w)
 
 iterateSpace :: W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> IO ()
 iterateSpace w = do

@@ -49,20 +49,20 @@ main = runSpace
   
 runSpace :: IO ()
 runSpace = do
-  w <- initEmptySpace Info (1,3) 50
+  w <- initEmptySpace Info (3,3) 100 (50,100) 2
   playIO 
     (InWindow "WaveSpace" (500,500) (0,0))
     black
     1
     w
-    (fmap (Translate (-50) (-50)) . drowSpace . fmap (const 10))
+    (fmap (Translate (-200) (-200)) . drowSpace . fmap (const 4))
     eventSpace
     (const return)
   where
-    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend iterateSpace a
+    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend initIterateSpaceWeave a -- iterateSpace a
     eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! 
       extend (initSpaceOperatorKeySectors 2 fISOKS ) a 
-    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 3 12) $! fmap (const (10,10)) a
+    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 5 24) $! fmap (const (10,10)) a
     eventSpace _ a = return a
     fISOKS p | boxS p >= 4 = return $ return $ (boxS p) `div` 2
     fISOKS _ = return $ Nothing

@@ -49,7 +49,7 @@ main = runSpace
   
 runSpace :: IO ()
 runSpace = do
-  w <- initEmptySpace Info (3,3) 100 (50,100) 2
+  w <- initEmptySpace Info (1,1) 100 (50,100) (1,1) 1
   playIO 
     (InWindow "WaveSpace" (500,500) (0,0))
     black
@@ -59,16 +59,52 @@ runSpace = do
     eventSpace
     (const return)
   where
-    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend initIterateSpaceWeave a -- iterateSpace a
-    eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! 
-      extend (initSpaceOperatorKeySectors 2 fISOKS ) a 
-    eventSpace (EventKey (SpecialKey KeyEnter) Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 5 24) $! fmap (const (10,10)) a
+    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend initIterateSpaceWeave a -- iterateSpace a 
+    eventSpace (EventKey (Char 'a') Down _ _) a = flipWM $! 
+      extend (spaceAddAmountWeave 1) a
+    eventSpace (EventKey (Char 'k') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 1 4) $! fmap (const (1,1)) a
+    eventSpace (EventKey (Char 'i') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 1 4) $! fmap (const (1,98)) a
+    eventSpace (EventKey (Char 'o') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 1 4) $! fmap (const (98,98)) a
+    eventSpace (EventKey (Char 'l') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 1 4) $! fmap (const (98,1)) a
+    eventSpace (EventKey (Char 'h') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 2 12) $! fmap (const (2,2)) a
+    eventSpace (EventKey (Char 'y') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 2 12) $! fmap (const (2,98)) a
+    eventSpace (EventKey (Char 'u') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 2 12) $! fmap (const (98,98)) a
+    eventSpace (EventKey (Char 'j') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 2 12) $! fmap (const (98,2)) a
     eventSpace _ a = return a
     fISOKS p | boxS p >= 4 = return $ return $ (boxS p) `div` 2
     fISOKS _ = return $ Nothing
 
 {-
+runSpace :: IO ()
+runSpace = do
+  w <- initEmptySpace Info (5,5) 100 (75,100) (20,100) 1
+  playIO 
+    (InWindow "WaveSpace" (500,500) (0,0))
+    black
+    1
+    w
+    (fmap (Translate (-200) (-200)) . drowSpace . fmap (const 4))
+    eventSpace
+    (const return)
+  where
+    eventSpace (EventKey (SpecialKey KeySpace) Down _ _) a = flipWM $! extend initIterateSpaceWeave a -- iterateSpace a 
+    eventSpace (EventKey (Char 'a') Down _ _) a = flipWM $! 
+      extend (spaceAddAmountWeave 1) a
+    eventSpace (EventKey (Char 'k') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 5 60) $! fmap (const (4,4)) a
+    eventSpace (EventKey (Char 'i') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 5 60) $! fmap (const (4,95)) a
+    eventSpace (EventKey (Char 'o') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 5 60) $! fmap (const (95,95)) a
+    eventSpace (EventKey (Char 'l') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 5 60) $! fmap (const (95,4)) a
+    eventSpace (EventKey (Char 'h') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 10 220) $! fmap (const (10,10)) a
+    eventSpace (EventKey (Char 'y') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 10 220) $! fmap (const (10,89)) a
+    eventSpace (EventKey (Char 'u') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 10 220) $! fmap (const (89,89)) a
+    eventSpace (EventKey (Char 'j') Down _ _) a = fmap void $! flipWM $! extend (spaceRandomKeyWrite 10 220) $! fmap (const (89,10)) a
+    eventSpace _ a = return a
+    fISOKS p | boxS p >= 4 = return $ return $ (boxS p) `div` 2
+    fISOKS _ = return $ Nothing
+
  extend (initSpaceOperatorKey (return . (+ (-1)) . (`div` 2)) (return . (`div` 2))) a 
 (return . (+ (-1)) . (`div` 2))
+eventSpace (EventKey (Char 'r') Down _ _) a = flipWM $! 
+extend (initSpaceOperatorKeySectors 2 fISOKS ) a
 -}
 

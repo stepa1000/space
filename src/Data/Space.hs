@@ -47,6 +47,7 @@ data SpaceOperator = SpaceOperator
   { spaceMapBool :: [Map (Int,Int) Bool]
   , spaceArea :: Int
   , spaceChance :: (Int,Int)
+  , spaceChanceMemorize :: (Int,Int)
   , spaceAmountWeave :: Int
   } deriving Generic
 
@@ -56,6 +57,7 @@ instance HasWaveOperator SpaceOperator where
 
 instance HasRActive SpaceOperator where
   chance = the @"spaceChance"
+  chanceMemorize = the @"spaceChanceMemorize"
   amountWeave = the @"spaceAmountWeave"
 
 type AdjSpaceL a = Env LogLevel :.: WaveSpaceL a
@@ -72,9 +74,10 @@ initEmptySpace ::
   (Int,Int) -> -- random area
   Int -> -- length array
   (Int,Int) -> -- chanse
+  (Int,Int) -> -- chanse memorize
   Int -> -- amountWeave
   IO (W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity ())
-initEmptySpace ll pa h ch amw = do
+initEmptySpace ll pa h ch chm amw = do
   let wll = createCoadj $ Identity ll
   coadjLogInfoM "Initial SpaceOperators" wll
   easo <- try @SomeException $ newArray_ ((0,0),(h-1,h-1))
@@ -86,7 +89,7 @@ initEmptySpace ll pa h ch amw = do
           coadjLogDebugM "newGenArray:area: start generate" wll
           a <- randomRIO pa
           coadjLogDebugM ("newGenArray:area:" .< a) wll
-          writeArray aso i $ SpaceOperator [] a ch amw
+          writeArray aso i $ SpaceOperator [] a ch chm amw
         ) $ range ((0,0),(h-1,h-1))
       coadjLogInfoM "initial Operands" wll
       oper <- initialOperandIO h
@@ -95,7 +98,7 @@ initEmptySpace ll pa h ch amw = do
     (Left e) -> error $ "initEmptySpace:" .< e
 
 initOneTestSpace :: IO (W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity ())
-initOneTestSpace = initEmptySpace Debug (1,1) 2 (50,100) 2
+initOneTestSpace = initEmptySpace Debug (1,1) 2 (50,100) (50,100) 2
 
 testSpace :: IO ()
 testSpace = do
@@ -141,6 +144,12 @@ initIterateSpaceWeave ::
   IO ()
 initIterateSpaceWeave w = do
   iterateWeave (getLogLevel w) (getWaveSpace w)
+
+spaceAddAmountWeave :: 
+  Int -> 
+  W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () ->
+  IO ()
+spaceAddAmountWeave i w = addAmountWeave i (getWaveSpace w)
 
 iterateSpace :: W.AdjointT (AdjSpaceL SpaceOperator) (AdjSpaceR SpaceOperator) Identity () -> IO ()
 iterateSpace w = do
